@@ -5,12 +5,14 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start" : "node sarch.js"
+    "start": "node sarch.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "David Carrera <brim.carrera@gmail.com",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^8.2.0",
+    "image-size": "^0.8.3",
     "json2xls": "^0.1.2",
     "move-file": "^2.0.0",
     "xlsx-to-json": "^0.3.0"

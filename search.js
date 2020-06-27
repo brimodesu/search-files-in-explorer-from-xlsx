@@ -4,6 +4,10 @@ const xlsxj = require("xlsx-to-json");
 const json2xls = require("json2xls");
 const moveFile = require("move-file");
 const fs = require("fs");
+const dotenv = require('dotenv');
+var sizeOf = require('image-size');
+
+dotenv.config();
 
 async function* getFiles(dir) {
   const dirents = await readdir(dir, { withFileTypes: true });
@@ -16,14 +20,11 @@ async function* getFiles(dir) {
     }
   }
 }
-
-let current = []
-
 getFileDirectory = async (file_to_search) => {
-  for await (const f of getFiles("../Proyecto Catalogos Digitales")) {
+  for await (const f of getFiles(process.env.ROOT_FOLDER)) {
     //console.log("Looking  for: ", file_to_search,"in ", f);
     let file_type = f.split(".").pop();
-    if (file_type == "jpg") {
+    if (file_type === process.env.FILE_EXTENSION_TO_FIND) {
       let file_name = f
         .split(/(\\|\/)/g)
         .pop()
@@ -31,13 +32,19 @@ getFileDirectory = async (file_to_search) => {
 
       if (file_name.indexOf(file_to_search) != -1) {
         if (file_name.length === file_to_search.length) {
-         // console.log("Looking  for: ", file_to_search, "in ", f);
-          return {
-            filter: file_to_search,
-            path: f,
-            file_name,
-            file_type,
-          };
+          var dimensions = sizeOf(f);
+          let formated_dimensions = dimensions.width + "x" + dimensions.height;
+          if(formated_dimensions === process.env.EXACT_DIMENSIONS){
+            return {
+              filter: file_to_search,
+              path: f,
+              file_name,
+              file_type,
+              dimensions: formated_dimensions
+            };
+          }
+         //console.log("Looking  for: ", file_to_search, "in ", f);
+        
         }
       
       }
@@ -59,9 +66,9 @@ let limit = 150;
 function convertXLSXToJson(cb) {
   xlsxj(
     {
-      input: "BASE_GT.xlsx",
+      input: process.env.XLSX_FILE,
       output: "output.json",
-      sheet: "TOTAL AMPLIACION BO",
+      sheet: process.env.XLSX_SHEET,
     },
     function (err, result) {
       if (err) {
@@ -78,21 +85,16 @@ async function DO() {
   await convertXLSXToJson(result => {
     result.forEach((element, index) => {
 
-
-
-
-        getFileDirectory(element.UPC_NBR)
+        getFileDirectory(element[process.env.XLSX_COLUMN_FILTER])
           .then((file) => {
             if (file) {
-              //console.log(index,file);
+              console.log(index,file);
               fs.copyFile(
                 file.path,
                 `./FinalDestination/${file.filter}.${file.file_type}`,
                 (err) => {
                   if (err) throw err;
                   //console.log("the file was copied ");
-
-                  //result = result;
                   final_json.push({
                     ...element,
                     path_in_system: file.path,
