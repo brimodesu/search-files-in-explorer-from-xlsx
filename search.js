@@ -17,8 +17,10 @@ async function* getFiles(dir) {
   }
 }
 
+let current = []
+
 getFileDirectory = async (file_to_search) => {
-  for await (const f of getFiles("../Proyecto 1")) {
+  for await (const f of getFiles("../Proyecto Catalogos Digitales")) {
     //console.log("Looking  for: ", file_to_search,"in ", f);
     let file_type = f.split(".").pop();
     if (file_type == "jpg") {
@@ -28,15 +30,22 @@ getFileDirectory = async (file_to_search) => {
         .split(".")[0];
 
       if (file_name.indexOf(file_to_search) != -1) {
-        return {
-          filter: file_to_search,
-          path: f,
-          file_name,
-          file_type,
-        };
+        if (file_name.length === file_to_search.length) {
+         // console.log("Looking  for: ", file_to_search, "in ", f);
+          return {
+            filter: file_to_search,
+            path: f,
+            file_name,
+            file_type,
+          };
+        }
+      
       }
+    
     }
+
   }
+
 };
 
 MoveFoundFile = async (file_path, file_name, type) => {
@@ -45,19 +54,33 @@ MoveFoundFile = async (file_path, file_name, type) => {
 };
 
 let final_json = [];
-xlsxj(
-  {
-    input: "BASE_GT.xlsx",
-    output: "output.json",
-    sheet: "TOTAL AMPLIACION BO",
-  },
-  function (err, result) {
-    if (err) {
-      console.error(err);
-    } else {
-        console.log(result.length);
-        
-      result.forEach((element, index) => {
+let limit = 150;
+
+function convertXLSXToJson(cb) {
+  xlsxj(
+    {
+      input: "BASE_GT.xlsx",
+      output: "output.json",
+      sheet: "TOTAL AMPLIACION BO",
+    },
+    function (err, result) {
+      if (err) {
+        console.error(err);
+      } else {
+        cb(result)
+      }
+    }
+  )
+}
+
+async function DO() {
+
+  await convertXLSXToJson(result => {
+    result.forEach((element, index) => {
+
+
+
+
         getFileDirectory(element.UPC_NBR)
           .then((file) => {
             if (file) {
@@ -67,33 +90,34 @@ xlsxj(
                 `./FinalDestination/${file.filter}.${file.file_type}`,
                 (err) => {
                   if (err) throw err;
-                  console.log("the file was copied ");
-                
-                //result = result;
+                  //console.log("the file was copied ");
+
+                  //result = result;
                   final_json.push({
                     ...element,
                     path_in_system: file.path,
                     copied_path: `/FinalDestination/${file.filter}.${file.file_type}`,
                   });
-                 
+
                 }
               );
-            }else{
-                final_json.push({
-                    ...element,
-                    path_in_system: `N/A`,
-                    copied_path: `N/A`,
-                  });
+            } else {
+              final_json.push({
+                ...element,
+                path_in_system: `N/A`,
+                copied_path: `N/A`,
+              });
             }
-            if (index === result.length-1) {
-                var xls = json2xls(final_json);
-                fs.writeFileSync("new_data.xlsx", xls, "binary");
-              }
+            if (index === limit - 1) {
+              var xls = json2xls(final_json);
+              fs.writeFileSync("new_data.xlsx", xls, "binary");
+            }
           })
           .catch((err) => {
             console.log(err);
           });
-      });
-    }
-  }
-);
+      
+    });
+  })
+}
+DO()
